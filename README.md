@@ -1,31 +1,31 @@
+[![CI](https://github.com/philip95macdonald-cmd/lead-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/philip95macdonald-cmd/lead-pipeline/actions)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 # lead-pipeline
 
-Form submission handler for Cloudflare Pages/Workers — validates input, enforces GDPR consent, and upserts contacts into your ESP. Brevo is wired up by default; swap the adapter for any other provider without touching the core logic.
+Form submission handler for Cloudflare Pages/Workers. Built to replace the typical "paste an ESP embed code and hope for the best" approach — this gives you full control over validation, GDPR consent logging, bot filtering, and rate limiting, without managing a server.
 
 ```
 Browser form → POST /api/lead → validate + rate-limit + honeypot → ESP adapter → Brevo (or other)
 ```
 
+Brevo is wired up. Swap to any other ESP by changing one env var.
+
 ## Features
 
-- **CORS** — strict origin allowlist, preflight handled
-- **Rate limiting** — 5 req/min per IP (in-memory, resets on worker restart)
+- **CORS** — strict origin allowlist, preflight handled correctly
+- **Rate limiting** — 5 req/min per IP
 - **Honeypot** — invisible fields trap bots; silently 200 so they don't retry
-- **GDPR consent** — required field; server-side timestamp recorded
-- **Adapter pattern** — swap ESP by changing one env var (`ESP_PROVIDER`)
-- **Idempotent** — Brevo's `updateEnabled: true` prevents duplicate contacts
+- **GDPR consent** — required field; server-side timestamp recorded (clients can't fake it)
+- **Adapter pattern** — switch ESP by changing `ESP_PROVIDER`; zero core logic changes
+- **Idempotent** — `updateEnabled: true` on Brevo; no duplicates
 
-## Deploy
+## Deploy (Cloudflare Pages)
 
 ```bash
-# Install Wrangler
 npm install -g wrangler
-
-# Set secrets
 wrangler secret put ESP_API_KEY
-wrangler secret put ALLOWED_ORIGINS   # https://your-domain.com,https://www.your-domain.com
-
-# Deploy
+wrangler secret put ALLOWED_ORIGINS   # https://your-domain.com
 wrangler pages deploy .
 ```
 
@@ -35,24 +35,24 @@ wrangler pages deploy .
 |---|---|---|
 | `ESP_PROVIDER` | yes | `brevo` \| `mailchimp` \| `hubspot` \| `sendgrid` \| `convertkit` \| `resend` |
 | `ESP_API_KEY` | yes | Your ESP's API key |
-| `ALLOWED_ORIGINS` | yes | Comma-separated list of allowed origins |
+| `ALLOWED_ORIGINS` | yes | Comma-separated allowed origins |
 
 ## ESP adapters
 
 | Provider | Status |
 |---|---|
-| Brevo | Implemented |
-| Mailchimp | Stub (contribute via PR) |
+| Brevo | Full implementation |
+| Mailchimp | Stub — contribute via PR |
 | HubSpot | Stub |
 | SendGrid | Stub |
 | ConvertKit | Stub |
 | Resend | Stub |
 
-Each adapter exports one function: `upsertContact(env, payload) → { ok: boolean }`. See any existing adapter for the shape.
+Each adapter exports one function: `upsertContact(env, payload) → { ok: boolean }`.
 
-## Form example
+## Drop-in form
 
-See `examples/contact-form.html` for a drop-in form with honeypot, consent checkbox, and fetch-based submission. Edit `LIST_ID` and `FORM_TYPE` at the top.
+`examples/contact-form.html` — honeypot included, consent checkbox wired, submits via fetch. Edit `LIST_ID` at the top.
 
 ## License
 
