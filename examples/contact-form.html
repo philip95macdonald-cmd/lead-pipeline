@@ -1,0 +1,62 @@
+<!--
+  Drop-in contact form — pairs with /api/lead.
+  Edit LIST_ID and FORM_TYPE, then include on any page.
+-->
+<form id="lead-form" novalidate>
+  <label>Email * <input type="email" name="email" required autocomplete="email"></label>
+  <label>First name <input type="text" name="firstname" autocomplete="given-name"></label>
+  <label>Last name  <input type="text" name="lastname"  autocomplete="family-name"></label>
+  <label>Company    <input type="text" name="company"   autocomplete="organization"></label>
+  <label>Message    <textarea name="message" rows="5" maxlength="5000"></textarea></label>
+
+  <label>
+    <input type="checkbox" name="consent" required>
+    I consent to my data being processed per the
+    <a href="/privacy/" target="_blank" rel="noopener">privacy policy</a>.
+  </label>
+
+  <!-- Honeypot — hidden via CSS; bots fill it; API silently 200s and skips -->
+  <input type="text" name="website" tabindex="-1" autocomplete="off"
+         style="position:absolute;left:-9999px;" aria-hidden="true">
+
+  <button type="submit">Send</button>
+  <p id="form-status" role="status" aria-live="polite"></p>
+</form>
+
+<script>
+(function () {
+  const form   = document.getElementById('lead-form');
+  const status = document.getElementById('form-status');
+  const LIST_ID   = 'YOUR_LIST_ID';   // ← your Brevo list ID
+  const FORM_TYPE = 'contact';        // 'contact' | 'demo' | 'newsletter'
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = 'Sending…';
+    const fd = new FormData(form);
+    try {
+      const res  = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:     fd.get('email'),
+          firstname: fd.get('firstname'),
+          lastname:  fd.get('lastname'),
+          company:   fd.get('company'),
+          message:   fd.get('message'),
+          consent:   fd.get('consent') === 'on',
+          list_id:   LIST_ID,
+          form_type: FORM_TYPE,
+          source:    location.href,
+          website:   fd.get('website') || '',
+        }),
+      });
+      const data = await res.json();
+      status.textContent = data.success ? 'Thanks — we\'ll be in touch.' : 'Something went wrong. Please email us directly.';
+      if (data.success) form.reset();
+    } catch {
+      status.textContent = 'Network error. Please try again.';
+    }
+  });
+})();
+</script>
